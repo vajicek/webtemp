@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style> /* set the CSS */
+
+body { font: 12px Arial;}
+
+path {
+  stroke: steelblue;
+	stroke-width: 2;
+	fill: none;
+}
+
+.axis path,
+.axis line {
+	fill: none;
+	stroke: grey;
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+</style>
+
+<!-- load the d3.js library -->
+<script src="d3.v3.min.js"></script>
+<script>
+
+	function AutoUpdatingPlot() {
+		this.InitChart();
+	}
+
+	AutoUpdatingPlot.prototype.InitChart = function() {
+
+		// Set the dimensions of the canvas / graph
+		this.margin = {top: 30, right: 20, bottom: 30, left: 50};
+		this.width = 400 - this.margin.left - this.margin.right,
+		this.height = 220 - this.margin.top - this.margin.bottom;
+
+		// Set the ranges
+		this.x = d3.scale.linear().range([0, this.width]);
+		this.y = d3.scale.linear().range([this.height, 0]);
+
+		// Define the axes
+		this.xAxis = d3.svg.axis().scale(this.x)
+			.orient("bottom").ticks(5);
+		this.yAxis = d3.svg.axis().scale(this.y)
+			.orient("left").ticks(5);
+
+		// Define the line
+		this.valueline = d3.svg.line()
+			.x(function(d) { return this.x(d.date); })
+			.y(function(d) { return this.y(d.temp); });
+
+		// Adds the svg canvas
+		this.chart1 = d3.select("#plot")
+			.append("svg")
+				.attr("width", this.width + this.margin.left + this.margin.right)
+				.attr("height", this.height + this.margin.top + this.margin.bottom)
+			.append("g")
+				.attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
+
+		this.minLabel = d3.select("#minvalue")
+				.data([0])
+					.text(function(d) { return d; });
+		this.maxLabel = d3.select("#maxvalue")
+				.data([0])
+					.text(function(d) { return d; });
+		this.meanLabel = d3.select("#meanvalue")
+				.data([0])
+					.text(function(d) { return d; });
+		this.currentLabel = d3.select("#currentvalue")
+				.data([0])
+					.text(function(d) { return d; });
+	}
+
+	AutoUpdatingPlot.prototype.SetupDataDomains = function(data) {
+		// convert milisec to sec
+		data.forEach(function(d) {
+			var total_sec = d.date / 1000;
+			var mins = total_sec / 60;
+			var sec = total_sec % 60;
+			d.date = d.date / 1000;
+		});
+
+		// Scale the range of the data
+		this.x.domain(d3.extent(data, function(d) { return d.date; }));
+
+		var min_val = d3.min(data, function(d) { return parseFloat(d.temp); });
+		var max_val = d3.max(data, function(d) { return parseFloat(d.temp); });
+		var mid_val = (max_val + min_val) / 2;
+		var current_val = parseFloat(data[data.length - 1].temp);
+		var mean_val = d3.mean(data, function(d) { return parseFloat(d.temp); });
+		var span = max_val - min_val;
+
+		this.y.domain([mid_val - 1.1 * span / 2, mid_val + 1.1 * span / 2]);
+
+		this.minLabel.data([min_val]).text(function(d) { return d.toFixed(2); });
+		this.maxLabel.data([max_val]).text(function(d) { return d.toFixed(2); });
+		this.meanLabel.data([mean_val]).text(function(d) { return d.toFixed(2); });
+		this.currentLabel.data([current_val]).text(function(d) { return d.toFixed(2); });
+	}
+
+	AutoUpdatingPlot.prototype.SetupChartCallback = function(error, data) {
+
+		this.SetupDataDomains(data);
+
+		// Add the valueline path.
+		this.chart1.selectAll("path").remove();
+		this.chart1.append("path")
+			.attr("class", "line")
+			.attr("d", this.valueline(data));
+
+		this.chart1.selectAll("g").remove();
+
+		// Add the X Axis
+		this.chart1.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + this.height + ")")
+			.call(this.xAxis);
+
+		// Add the Y Axis
+		this.chart1.append("g")
+			.attr("class", "y axis")
+			.call(this.yAxis);
+	}
+
+	AutoUpdatingPlot.prototype.LoadDataCallback = function() {
+		self = this;
+
+		// Get the data
+		d3.csv("data?"+Math.random(), function(error, data) {
+			self.SetupChartCallback(error, data);
+		});
+	};
+
+	function OnLoadHandler() {
+		var plot = new AutoUpdatingPlot();
+		setInterval( function() { plot.LoadDataCallback(); }, 3000);
+	}
+
+</script>
+
+<body onload="OnLoadHandler();">
+  <div>
+    <span>Min</span>
+    <span id="minvalue"></span>
+  </div>
+  <div>
+    <span>Max</span>
+    <span id="maxvalue"></span>
+  </div>
+  <div>
+    <span>Mean</span>
+    <span id="meanvalue"></span>
+  </div>
+  <div>
+    <span>Current</span>
+    <span id="currentvalue"></span>
+  </div>
+  <div id="plot">
+  </div>
+</body>
