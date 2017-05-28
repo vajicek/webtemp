@@ -10,7 +10,7 @@ class WebInterfaceThermometer {
 protected:
 
   void loadCredentialsFromFs() {
-    f = SPIFFS.open("/passwd", "r");
+    File f = SPIFFS.open("/passwd", "r");
     if (!f) {
         Serial.println("file open /passwd failed");
     } 
@@ -20,7 +20,7 @@ protected:
 
   void setupWifi() {
     loadCredentialsFromFs();
-    WiFi.begin(ssid, password);
+    WiFi.begin(ssid.c_str(), password.c_str());
     Serial.println("");
   
     // Wait for connection
@@ -104,6 +104,10 @@ public:
 
   WebInterfaceThermometer() : 
     server(80), currentPointer(0), samplesCount(0), sensorPin(0), sampleRateMs(1000) {
+      for (int i = 0; i < bufferSize; i++) {
+        temperatures[i] = 0;
+        timeStamps[i] = 0;
+      }
   }
 
   void setup(void) {

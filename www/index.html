@@ -29,6 +29,7 @@ path {
 	}
 
 	AutoUpdatingPlot.prototype.InitChart = function() {
+		var self = this;
 
 		// Set the dimensions of the canvas / graph
 		this.margin = {top: 30, right: 20, bottom: 30, left: 50};
@@ -41,14 +42,24 @@ path {
 
 		// Define the axes
 		this.xAxis = d3.svg.axis().scale(this.x)
-			.orient("bottom").ticks(5);
+			.orient("bottom").ticks(5)
+			.tickFormat(function(d) {
+				var total_sec = d / 1000;
+				var mins = (total_sec / 60) % 60;
+				var sec = total_sec % 60;
+				var hours = total_sec / 3600;
+				return self.ZeroPad(Math.floor(hours), 2) + ':' +
+					self.ZeroPad(Math.floor(mins), 2) + ':' +
+					self.ZeroPad(Math.floor(sec), 2);
+			});
 		this.yAxis = d3.svg.axis().scale(this.y)
 			.orient("left").ticks(5);
 
 		// Define the line
 		this.valueline = d3.svg.line()
-			.x(function(d) { return this.x(d.date); })
-			.y(function(d) { return this.y(d.temp); });
+			.x(function(d) { return self.x(d.date); })
+			.y(function(d) { return self.y(d.temp); });
+
 
 		// Adds the svg canvas
 		this.chart1 = d3.select("#plot")
@@ -72,14 +83,15 @@ path {
 					.text(function(d) { return d; });
 	}
 
+	AutoUpdatingPlot.prototype.ZeroPad = function(num, size) {
+		var s = "000000000" + num;
+		return s.substr(s.length-size);
+	}
+
 	AutoUpdatingPlot.prototype.SetupDataDomains = function(data) {
-		// convert milisec to sec
-		data.forEach(function(d) {
-			var total_sec = d.date / 1000;
-			var mins = total_sec / 60;
-			var sec = total_sec % 60;
-			d.date = d.date / 1000;
-		});
+		var self = this;
+
+		data.forEach(function(d) { d.date = parseFloat(d.date); });
 
 		// Scale the range of the data
 		this.x.domain(d3.extent(data, function(d) { return d.date; }));
@@ -124,7 +136,7 @@ path {
 	}
 
 	AutoUpdatingPlot.prototype.LoadDataCallback = function() {
-		self = this;
+		var self = this;
 
 		// Get the data
 		d3.csv("data?"+Math.random(), function(error, data) {
@@ -142,19 +154,19 @@ path {
 <body onload="OnLoadHandler();">
   <div>
     <span>Min</span>
-    <span id="minvalue"></span>
+    <span id="minvalue"></span><span>&#x2103;</span>
   </div>
   <div>
     <span>Max</span>
-    <span id="maxvalue"></span>
+    <span id="maxvalue"></span><span>&#x2103;</span>
   </div>
   <div>
     <span>Mean</span>
-    <span id="meanvalue"></span>
+    <span id="meanvalue"></span><span>&#x2103;</span>
   </div>
   <div>
     <span>Current</span>
-    <span id="currentvalue"></span>
+    <span id="currentvalue"></span><span>&#x2103;</span>
   </div>
   <div id="plot">
   </div>
